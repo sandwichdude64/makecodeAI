@@ -61,7 +61,7 @@ function renderGrid(pixelData) {
   });
 }
 
-// 4. API Request Handler
+// 4. API Request Handler (Direct call without proxy)
 async function askAI(userPrompt) {
   const tokenInput = document.getElementById("hfTokenInput");
   const userKey = tokenInput.value.trim();
@@ -71,11 +71,10 @@ async function askAI(userPrompt) {
 
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must return ONLY the img\`\` block with no other text. Grid size: 19x19 chars. Available colors: . (blank), 1-9, a-f. User request: ${userPrompt}`;
 
-  const targetApiUrl = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetApiUrl)}`;
+  const apiUrl = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
 
   try {
-    const response = await fetch(proxyUrl, {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
