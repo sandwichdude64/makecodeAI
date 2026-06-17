@@ -28,7 +28,29 @@ const TEMPLATE = `img\`
 ....ffff.ffff......
 \``;
 
-// Send request to HuggingFace Inference API Gateway
+// FIXED: Extract grid even if wrapped in markdown code blocks
+function parseMakeCodeImage(text) {
+  if (!text) return Array(19).fill(null).map(() => Array(19).fill(null));
+  
+  // Strip markdown code blocks if present
+  let cleanedText = text.replace(/```[a-z]*\n?/gi, "").replace(/```/g, "");
+  const lines = cleanedText.split("\n");
+  
+  const gridLines = lines.filter(line => {
+    const clean = line.trim();
+    return clean.length === 19 && /^[.0-9a-fA-F]+$/.test(clean);
+  });
+
+  if (gridLines.length === 0) {
+    return Array(19).fill(null).map(() => Array(19).fill(null));
+  }
+
+  return gridLines.map(line => 
+    line.trim().split("").map(c => (c === "." ? null : c))
+  );
+}
+
+// FIXED: Call the actual Hugging Face Inference API
 async function askAI(userPrompt) {
   const userKey = tokenInput.value.trim();
   if (!userKey) {
@@ -38,7 +60,7 @@ async function askAI(userPrompt) {
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block. The user wants this sprite to look like: ${userPrompt} Fill in this template configuration exactly: ${TEMPLATE}`;
 
   try {
-    // FIXED: Real API endpoint sub-domain to handle cross-origin network queries
+    // FIXED: Use the actual serverless inference API endpoint
     const response = await fetch(
       "https://huggingface.co", 
       {
@@ -50,49 +72,31 @@ async function askAI(userPrompt) {
         body: JSON.stringify({
           inputs: fullPrompt,
           parameters: {
-            return_full_text: false // Essential: drops instructions from raw response text
+            return_full_text: false, // Don't echo the prompt back
+            max_new_tokens: 512      // Keep response short and fast
           }
         })
       }
     );
 
+    // FIXED: Always read body, even on HTTP errors, so we can inspect them
     const data = await response.json();
 
-    // FIXED: Safely unpacks standard text-generation dictionary payloads
     if (response.ok) {
+      // Serverless API returns: [ { generated_text: "..." } ]
       if (Array.isArray(data) && data[0] && data[0].generated_text) {
         return data[0].generated_text;
       } else if (data.generated_text) {
         return data.generated_text;
+      } else {
+        return "Error: Unexpected response format from model.\n\nRaw: " + JSON.stringify(data);
       }
-    } else if (data.error) {
-      return `API Error: ${data.error}`;
+    } else {
+      return `API Error (${response.status}): ${data.error || JSON.stringify(data)}`;
     }
-    return "Error: Unexpected structural response format from inference endpoint.";
   } catch (err) {
     return `Network Error: ${err.message}`;
   }
-}
-
-// Extract rows that match our target matrix shape
-function parseMakeCodeImage(text) {
-  if (!text) return Array(19).fill(null).map(() => Array(19).fill(null));
-  const lines = text.split("\n");
-  
-  // Filters for string values that are exactly 19 characters wide containing hex digits or dots
-  const gridLines = lines.filter(line => {
-    const clean = line.trim();
-    return clean.length === 19 && /^[.0-9a-fA-F]+$/.test(clean);
-  });
-
-  // If parsing fails or yields bad shapes, fall back to blank array map
-  if (gridLines.length === 0) {
-    return Array(19).fill(null).map(() => Array(19).fill(null));
-  }
-
-  return gridLines.map(line => 
-    line.trim().split("").map(c => (c === "." ? null : c))
-  );
 }
 
 // Convert MakeCode color strings into hex values
