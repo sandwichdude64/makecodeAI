@@ -3,9 +3,7 @@ const input = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
 const outputBox = document.getElementById("output");
 const grid = document.getElementById("pixelGrid");
-
-// HuggingFace API key
-const HF_KEY = "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"; 
+const tokenInput = document.getElementById("hfTokenInput");
 
 // A strict, verified 19x19 grid template (19 rows, each exactly 19 characters wide)
 const TEMPLATE = `img\`
@@ -30,9 +28,14 @@ const TEMPLATE = `img\`
 ....ffff.ffff......
 \``;
 
-// Send request to HuggingFace Inference API
-// Send request to HuggingFace Inference API
+// Send request to HuggingFace Inference API Gateway
 async function askAI(userPrompt) {
+    const userKey = tokenInput.value.trim();
+    
+    if (!userKey) {
+        return "Error: Please paste your Hugging Face Token (hf_...) into the top box first.";
+    }
+
     const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. 
 You must stay safe, friendly, and appropriate. 
 You must NEVER change the overall grid size. 
@@ -44,19 +47,19 @@ Fill in this template configuration exactly:
 ${TEMPLATE}`;
 
     try {
-        //  FIXED: Points directly to the dedicated API gateway endpoint
+        // FIXED: Points to api-inference endpoint to bypass website CORS locks
         const response = await fetch(
             "https://huggingface.co",
             {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${HF_KEY}`
+                    "Authorization": `Bearer ${userKey}`
                 },
                 body: JSON.stringify({ 
                     inputs: fullPrompt,
                     parameters: {
-                        return_full_text: false // Essential: drops system instructions from raw response text
+                        return_full_text: false // Essential: drops instructions from raw response text
                     }
                 })
             }
@@ -64,7 +67,7 @@ ${TEMPLATE}`;
         
         const data = await response.json();
         
-        //  FIXED: Handles both structured arrays and plain object response payloads
+        // FIXED: Safely unpacks standard text-generation dictionary payloads
         if (response.ok) {
             if (Array.isArray(data) && data[0] && data[0].generated_text) {
                 return data[0].generated_text;
@@ -74,15 +77,15 @@ ${TEMPLATE}`;
         } else if (data.error) {
             return `API Error: ${data.error}`;
         }
-        return "Error: Empty or unexpected JSON response layout from server.";
+        return "Error: Unexpected structural response format from inference endpoint.";
     } catch (err) {
         return `Network Error: ${err.message}`;
     }
 }
 
-
 // Extract rows that match our target matrix shape 
 function parseMakeCodeImage(text) {
+    if (!text) return Array(19).fill(null).map(() => Array(19).fill(null));
     const lines = text.split("\n");
     
     // Filters for string values that are exactly 19 characters wide containing hex digits or dots
@@ -127,10 +130,6 @@ function makeCodeColor(char) {
 // Render our matrix payload into visual DOM nodes
 function renderGrid(pixelData) {
     grid.innerHTML = "";
-    
-    // Automatically dynamic structural setup matching grid shape
-    const numColumns = pixelData && pixelData[0] ? pixelData[0].length : 19;
-    grid.style.gridTemplateColumns = `repeat(${numColumns}, 1fr)`;
     
     pixelData.forEach(row => {
         row.forEach(cell => {
