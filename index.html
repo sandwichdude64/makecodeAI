@@ -24,10 +24,9 @@
             height: 304px;
             background: #000000;
             border: 4px solid #4c4cff;
-            /* Added: Prevents individual pixel overflows and sets default 19x19 tracks */
             grid-template-columns: repeat(19, 1fr);
             grid-template-rows: repeat(19, 1fr);
-            box-sizing: border-box; 
+            box-sizing: border-box;
         }
         .pixel {
             width: 100%;
@@ -35,21 +34,39 @@
         }
         #rightPanel {
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #hfTokenInput {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            background: #2a2a2a;
+            color: #ff9d00;
+            border: 2px solid #ff9d00;
+            box-sizing: border-box;
+            font-family: Consolas, monospace;
+        }
+        #hfTokenInput::placeholder {
+            color: #888;
         }
         #output {
             background: #111;
             padding: 10px;
             border: 2px solid #4c4cff;
-            height: 200px;
+            height: 160px;
             overflow-y: auto;
             white-space: pre-wrap;
-            margin-bottom: 10px;
+            box-sizing: border-box;
         }
         #userInput {
             width: 100%;
             padding: 10px;
             font-size: 16px;
-            margin-bottom: 10px;
+            background: #252525;
+            color: white;
+            border: 1px solid #555;
             box-sizing: border-box;
         }
         #sendBtn {
@@ -64,6 +81,11 @@
         #sendBtn:hover {
             background: #6a6aff;
         }
+        #sendBtn:disabled {
+            background: #444;
+            color: #888;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +96,9 @@
         
         <!-- Right Panel -->
         <div id="rightPanel">
+            <!-- Dynamic token setup keeps your key protected from GitHub scrapers -->
+            <input id="hfTokenInput" type="password" placeholder="Paste your Hugging Face Access Token here (hf_...)">
+            
             <div id="output">AI output will appear here…</div>
             <input id="userInput" placeholder="Describe your sprite (e.g., 'make it a robot')">
             <button id="sendBtn">Generate Sprite</button>
