@@ -5,130 +5,166 @@ const outputBox = document.getElementById("output");
 const grid = document.getElementById("pixelGrid");
 
 // HuggingFace API key
-const HF_KEY = "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";
+const HF_KEY = "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"; 
 
-// Your 19x19 template (you can replace this with any template)
-const TEMPLATE = `
-img\`
-2457698a3db1cef..
-.................
-.................
-.....fffffff.....
-...ff.......ff...
-...f..f...f..f...
-...f..f...f..f...
-...f..f...f..f...
-...f.........f...
-...f...fff...f...
-...ff.......ff...
-....fffffffff....
-...f.........f...
-..ff.........ff..
-..ff.........ff..
-.f..f.......f..f.
-.f..fffffffff..f.
-..ff.f.f.f.f.ff..
-....ffff.ffff....
-....f..f.f..f....
-\`
-`;
+// A strict, verified 19x19 grid template (19 rows, each exactly 19 characters wide)
+const TEMPLATE = `img\`
+...................
+...................
+...................
+.....fffffff.......
+...ff.......ff.....
+...f..f...f..f.....
+...f..f...f..f.....
+...f..f...f..f.....
+...f.........f.....
+...f...fff...f.....
+...ff.......ff.....
+....fffffffff......
+...f.........f.....
+..ff.........ff....
+..ff.........ff....
+.f..f.......f..f...
+.f..fffffffff..f...
+..ff.f.f.f.f.ff....
+....ffff.ffff......
+\``;
 
-// Send request to HuggingFace
+// Send request to HuggingFace Inference API
 async function askAI(userPrompt) {
-    const fullPrompt = `
-You are an AI that ONLY fills in MakeCode img\`\` templates.
-You must stay safe, friendly, and appropriate.
-You must NEVER change the grid size.
-You must ONLY replace characters with MakeCode color values (0–9, a–f) or dots.
-You must NEVER add extra characters or lines.
-You must NEVER output anything except the img\`\` block.
-
+    const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. 
+You must stay safe, friendly, and appropriate. 
+You must NEVER change the overall grid size. 
+You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). 
+You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block.
 The user wants this sprite to look like: ${userPrompt}
 
-Fill in this template:
+Fill in this template configuration exactly:
+${TEMPLATE}`;
 
-${TEMPLATE}
-`;
-
-    const response = await fetch(
-        "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct",
-
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${HF_KEY}`
-            },
-            body: JSON.stringify({ inputs: fullPrompt })
+    try {
+        const response = await fetch(
+            "https://huggingface.co",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${HF_KEY}`
+                },
+                body: JSON.stringify({ 
+                    inputs: fullPrompt,
+                    parameters: {
+                        return_full_text: false // Essential: drops system instructions from raw response text
+                    }
+                })
+            }
+        );
+        
+        const data = await response.json();
+        
+        if (response.ok && data && data[0]) {
+            return data[0].generated_text;
+        } else if (data.error) {
+            return `API Error: ${data.error}`;
         }
-    );
-
-    const data = await response.json();
-    return data[0].generated_text;
+        return "Error: Empty or unexpected JSON response layout from server.";
+    } catch (err) {
+        return `Network Error: ${err.message}`;
+    }
 }
 
-// Parse MakeCode img`` into a 2D array
+// Extract rows that match our target matrix shape 
 function parseMakeCodeImage(text) {
-    const lines = text
-        .split("\n")
-        .filter(l => l.includes(".") || l.match(/[0-9a-f]/));
+    const lines = text.split("\n");
+    
+    // Filters for string values that are exactly 19 characters wide containing hex digits or dots
+    const gridLines = lines.filter(line => {
+        const clean = line.trim();
+        return clean.length === 19 && /^[.0-9a-fA-F]+$/.test(clean);
+    });
 
-    return lines.map(line =>
+    // If parsing fails or yields bad shapes, fall back to blank array map
+    if (gridLines.length === 0) {
+        return Array(19).fill(null).map(() => Array(19).fill(null));
+    }
+
+    return gridLines.map(line => 
         line.trim().split("").map(c => (c === "." ? null : c))
     );
 }
 
-// Convert MakeCode color numbers to real colors
+// Convert MakeCode color strings into hex values
 function makeCodeColor(char) {
     const palette = {
-        ".": "transparent",   // transparent
-        "1": "#FFFFFF",       // white
-        "2": "#FF2121",       // red
-        "3": "#FF93C4",       // pink
-        "4": "#FF8135",       // orange
-        "5": "#FFF609",       // yellow
-        "6": "#249CA3",       // teal
-        "7": "#78DC52",       // green
-        "8": "#003FAD",       // dark blue
-        "9": "#87F2FF",       // light blue
-        "a": "#8E2EC4",       // purple
-        "b": "#A4839F",       // grayish purple
-        "c": "#5C406C",       // dark purple
-        "d": "#E5CDC4",       // beige / skin
-        "e": "#91463D",       // brown
-        "f": "#000000"        // black
+        ".": "transparent",
+        "1": "#FFFFFF", // white
+        "2": "#FF2121", // red
+        "3": "#FF93C4", // pink
+        "4": "#FF8135", // orange
+        "5": "#FFF609", // yellow
+        "6": "#249CA3", // teal
+        "7": "#78DC52", // green
+        "8": "#003FAD", // dark blue
+        "9": "#87F2FF", // light blue
+        "a": "#8E2EC4", // purple
+        "b": "#A4839F", // grayish purple
+        "c": "#5C406C", // dark purple
+        "d": "#E5CDC4", // beige / skin
+        "e": "#91463D", // brown
+        "f": "#000000"  // black
     };
-    return palette[char] || "transparent";
+    return palette[char.toLowerCase()] || "transparent";
 }
 
-
-// Render the pixel grid
+// Render our matrix payload into visual DOM nodes
 function renderGrid(pixelData) {
     grid.innerHTML = "";
-    grid.style.gridTemplateColumns = `repeat(${pixelData[0].length}, 1fr)`;
-
+    
+    // Automatically dynamic structural setup matching grid shape
+    const numColumns = pixelData && pixelData[0] ? pixelData[0].length : 19;
+    grid.style.gridTemplateColumns = `repeat(${numColumns}, 1fr)`;
+    
     pixelData.forEach(row => {
         row.forEach(cell => {
             const div = document.createElement("div");
             div.className = "pixel";
-
             if (cell !== null) {
                 div.style.backgroundColor = makeCodeColor(cell);
             }
-
             grid.appendChild(div);
         });
     });
 }
 
-// When user clicks Generate
-sendBtn.addEventListener("click", async () => {
-    const prompt = input.value;
-    outputBox.textContent = "Thinking…";
-
+// Main execution process bound to event interactions
+async function generateSprite() {
+    const prompt = input.value.trim();
+    if (!prompt) return;
+    
+    // Toggle processing state UI elements
+    outputBox.textContent = "Processing sprite request via Qwen 0.5B AI...";
+    input.disabled = true;
+    sendBtn.disabled = true;
+    
     const aiText = await askAI(prompt);
     outputBox.textContent = aiText;
-
+    
     const pixelData = parseMakeCodeImage(aiText);
     renderGrid(pixelData);
+    
+    // Reset control bindings
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.focus();
+}
+
+// Bind events to the UI
+sendBtn.addEventListener("click", generateSprite);
+input.addEventListener("keydown", (event) => {
+    if (event.key === 'Enter') {
+        generateSprite();
+    }
 });
+
+// Initialize template view container placeholder when loading page
+renderGrid(parseMakeCodeImage(TEMPLATE));
