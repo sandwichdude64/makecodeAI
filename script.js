@@ -74,10 +74,10 @@ async function askAI(userPrompt) {
     return "Error: Please paste your Hugging Face Token (hf_...) into the top box first.";
   }
 
-  const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block. The user wants this sprite to look like: ${userPrompt} Fill in this template configuration exactly: ${TEMPLATE}`;
+  const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must return ONLY the img\`\` block with no other text. Grid size: 19x19 chars. Available colors: . (blank), 1-9, a-f. User request: ${userPrompt}`;
 
-  const targetApiUrl = "https://huggingface.co";
-  const proxyUrl = `https://corsproxy.io{encodeURIComponent(targetApiUrl)}`; // FIXED URL SYNTAX
+  const targetApiUrl = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
+  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetApiUrl)}`;
 
   try {
     const response = await fetch(proxyUrl, {
@@ -87,9 +87,11 @@ async function askAI(userPrompt) {
         "Authorization": `Bearer ${userKey}`
       },
       body: JSON.stringify({
-        model: "Qwen/Qwen2.5-Coder-0.5B-Instruct", 
-        messages: [{ "role": "user", "content": fullPrompt }],
-        max_tokens: 512 
+        inputs: fullPrompt,
+        parameters: {
+          return_full_text: false,
+          max_new_tokens: 512
+        }
       })
     });
 
@@ -99,8 +101,10 @@ async function askAI(userPrompt) {
     }
 
     const data = await response.json();
-    if (data.choices && data.choices[0] && data.choices[0].message) {
-      return data.choices[0].message.content;
+    if (Array.isArray(data) && data[0] && data[0].generated_text) {
+      return data[0].generated_text;
+    } else if (data.generated_text) {
+      return data.generated_text;
     } else {
       return "Error: Unexpected response format from model.";
     }
@@ -137,5 +141,7 @@ input.addEventListener("keydown", (event) => {
   }
 });
 
-// 7. Initial Run to show template
-renderGrid(parseMakeCodeImage(TEMPLATE));
+// 7. Initial Run to show template (wrapped in DOMContentLoaded to ensure all elements exist)
+document.addEventListener("DOMContentLoaded", () => {
+  renderGrid(parseMakeCodeImage(TEMPLATE));
+});
