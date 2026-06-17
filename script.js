@@ -51,7 +51,7 @@ ${TEMPLATE}
 `;
 
     const response = await fetch(
-        "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct",
+        "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct",
 
         {
             method: "POST",
