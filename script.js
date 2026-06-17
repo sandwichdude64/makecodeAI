@@ -5,7 +5,7 @@ const outputBox = document.getElementById("output");
 const grid = document.getElementById("pixelGrid");
 const tokenInput = document.getElementById("hfTokenInput");
 
-// A strict, verified 19x19 grid template (19 rows, each exactly 19 characters wide)
+// A strict,  verified 19x19 grid template (19 rows, each exactly 19 characters wide)
 const TEMPLATE = `img\`
 ...................
 ...................
