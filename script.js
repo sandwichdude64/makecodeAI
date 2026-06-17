@@ -1,10 +1,3 @@
-// 1. DOM Elements at the top
-const input = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-const outputBox = document.getElementById("output");
-const grid = document.getElementById("pixelGrid");
-const tokenInput = document.getElementById("hfTokenInput");
-
 const TEMPLATE = `img\`
 ...................
 ...................
@@ -52,8 +45,9 @@ function parseMakeCodeImage(text) {
   return gridLines.map(line => line.trim().split("").map(c => (c === "." ? null : c)));
 }
 
-// 3. The UI Renderer (Must be declared before generateSprite calls it!)
+// 3. The UI Renderer
 function renderGrid(pixelData) {
+  const grid = document.getElementById("pixelGrid");
   grid.innerHTML = "";
   pixelData.forEach(row => {
     row.forEach(cell => {
@@ -69,6 +63,7 @@ function renderGrid(pixelData) {
 
 // 4. API Request Handler
 async function askAI(userPrompt) {
+  const tokenInput = document.getElementById("hfTokenInput");
   const userKey = tokenInput.value.trim();
   if (!userKey) {
     return "Error: Please paste your Hugging Face Token (hf_...) into the top box first.";
@@ -115,6 +110,10 @@ async function askAI(userPrompt) {
 
 // 5. Main Execution Flow
 async function generateSprite() {
+  const input = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const outputBox = document.getElementById("output");
+
   const prompt = input.value.trim();
   if (!prompt) return;
 
@@ -133,15 +132,20 @@ async function generateSprite() {
   input.focus();
 }
 
-// 6. Interaction Event Listeners
-sendBtn.addEventListener("click", generateSprite);
-input.addEventListener("keydown", (event) => {
-  if (event.key === 'Enter') {
-    generateSprite();
-  }
-});
-
-// 7. Initial Run to show template (wrapped in DOMContentLoaded to ensure all elements exist)
+// 6. Initialize everything when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
+  // Get references to DOM elements
+  const input = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+
+  // Attach event listeners
+  sendBtn.addEventListener("click", generateSprite);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === 'Enter') {
+      generateSprite();
+    }
+  });
+
+  // Show initial template
   renderGrid(parseMakeCodeImage(TEMPLATE));
 });
