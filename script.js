@@ -51,6 +51,7 @@ function parseMakeCodeImage(text) {
 }
 
 // FIXED: Call the actual Hugging Face Inference API
+// FIXED: Call the actual Hugging Face Inference API via the correct Chat endpoint and CORS proxy
 async function askAI(userPrompt) {
   const userKey = tokenInput.value.trim();
   if (!userKey) {
@@ -59,80 +60,48 @@ async function askAI(userPrompt) {
 
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block. The user wants this sprite to look like: ${userPrompt} Fill in this template configuration exactly: ${TEMPLATE}`;
 
+  // 1. Target the correct Hugging Face standard OpenAI-compatible completions path
+  const targetApiUrl = "https://huggingface.co";
+  
+  // 2. Wrap it cleanly with your CORS proxy
+  const proxyUrl = `https://corsproxy.io{encodeURIComponent(targetApiUrl)}`;
+
   try {
-    // FIX: Using the Chat Completions endpoint which allows native browser requests (CORS-safe)
-    const response = await fetch(
-      "https://huggingface.co",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${userKey}`
-        },
-        body: JSON.stringify({
-          model: "Qwen/Qwen2.5-Coder-0.5B-Instruct", // Model moves inside the JSON body
-          messages: [
-            { "role": "user", "content": fullPrompt } // Prompt wrapped in standard chat format
-          ],
-          max_tokens: 512 // Set output limit
-        })
-      }
-    );
+    const response = await fetch(proxyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${userKey}` // Transmits token through the proxy
+      },
+      body: JSON.stringify({
+        model: "Qwen/Qwen2.5-Coder-0.5B-Instruct", 
+        messages: [
+          { "role": "user", "content": fullPrompt } 
+        ],
+        max_tokens: 512 
+      })
+    });
+
+    // Check if the response failed before reading payload text
+    if (!response.ok) {
+      const errorText = await response.text();
+      return `API Error (${response.status}): ${errorText}`;
+    }
 
     const data = await response.json();
 
-    if (response.ok) {
-      // FIX: Chat endpoints return data in choices[0].message.content
-      if (data.choices && data.choices[0] && data.choices[0].message) {
-        return data.choices[0].message.content;
-      } else {
-        return "Error: Unexpected response format from model.\n\nRaw: " + JSON.stringify(data);
-      }
+    // 3. Extract completion content string reliably
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      return data.choices[0].message.content;
     } else {
-      return `API Error (${response.status}): ${data.error?.message || JSON.stringify(data)}`;
+      return "Error: Unexpected response format from model.\n\nRaw: " + JSON.stringify(data);
     }
+    
   } catch (err) {
     return `Network Error: ${err.message}`;
   }
 }
 
-// Convert MakeCode color strings into hex values
-function makeCodeColor(char) {
-  const palette = {
-    ".": "transparent",
-    "1": "#FFFFFF", // white
-    "2": "#FF2121", // red
-    "3": "#FF93C4", // pink
-    "4": "#FF8135", // orange
-    "5": "#FFF609", // yellow
-    "6": "#249CA3", // teal
-    "7": "#78DC52", // green
-    "8": "#003FAD", // dark blue
-    "9": "#87F2FF", // light blue
-    "a": "#8E2EC4", // purple
-    "b": "#A4839F", // grayish purple
-    "c": "#5C406C", // dark purple
-    "d": "#E5CDC4", // beige / skin
-    "e": "#91463D", // brown
-    "f": "#000000" // black
-  };
-  return palette[char.toLowerCase()] || "transparent";
-}
-
-// Render our matrix payload into visual DOM nodes
-function renderGrid(pixelData) {
-  grid.innerHTML = "";
-  pixelData.forEach(row => {
-    row.forEach(cell => {
-      const div = document.createElement("div");
-      div.className = "pixel";
-      if (cell !== null) {
-        div.style.backgroundColor = makeCodeColor(cell);
-      }
-      grid.appendChild(div);
-    });
-  });
-}
 
 // Main execution process bound to event interactions
 async function generateSprite() {
