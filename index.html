@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MakeCode AI Webpage</title>
+
+    <style>
+        body {
+            background: #1e1e1e;
+            color: white;
+            font-family: Consolas, monospace;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        #container {
+            display: flex;
+            gap: 20px;
+        }
+
+        #pixelGrid {
+            display: grid;
+            width: 304px;
+            height: 304px;
+            background: #000000;
+            border: 4px solid #4c4cff;
+        }
+
+        .pixel {
+            width: 100%;
+            height: 100%;
+        }
+
+        #rightPanel {
+            flex: 1;
+        }
+
+        #output {
+            background: #111;
+            padding: 10px;
+            border: 2px solid #4c4cff;
+            height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+        }
+
+        #userInput {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        #sendBtn {
+            width: 100%;
+            padding: 10px;
+            background: #4c4cff;
+            color: white;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        #sendBtn:hover {
+            background: #6a6aff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>MAKECODE AI WEBPAGE</h1>
+
+    <div id="container">
+
+        <!-- Pixel Grid -->
+        <div id="pixelGrid"></div>
+
+        <!-- Right Panel -->
+        <div id="rightPanel">
+            <div id="output">AI output will appear here…</div>
+
+            <input id="userInput" placeholder="Describe your sprite (e.g., 'make it a robot')">
+            <button id="sendBtn">Generate Sprite</button>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
