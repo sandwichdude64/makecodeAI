@@ -62,7 +62,7 @@ async function askAI(userPrompt) {
   try {
     // FIXED: Use the actual serverless inference API endpoint
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct", 
+      "https://router.huggingface.co/hf-inference/models/Qwen/Qwen2.5-Coder-0.5B-Instruct", 
       {
         method: "POST",
         headers: {
