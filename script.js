@@ -61,7 +61,7 @@ function renderGrid(pixelData) {
   });
 }
 
-// 4. API Request Handler (Direct call without proxy)
+// 4. API Request Handler - Qwen2.5-Coder-0.5B-Instruct via HF Inference API
 async function askAI(userPrompt) {
   const tokenInput = document.getElementById("hfTokenInput");
   const userKey = tokenInput.value.trim();
@@ -71,6 +71,7 @@ async function askAI(userPrompt) {
 
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must return ONLY the img\`\` block with no other text. Grid size: 19x19 chars. Available colors: . (blank), 1-9, a-f. User request: ${userPrompt}`;
 
+  // Use Hugging Face Inference API endpoint directly
   const apiUrl = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
 
   try {
@@ -90,15 +91,19 @@ async function askAI(userPrompt) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      return `API Error (${response.status}): ${errorText}`;
+      const errorData = await response.text();
+      return `API Error (${response.status}): ${errorData}`;
     }
 
     const data = await response.json();
+    
+    // HF API returns array of objects with generated_text
     if (Array.isArray(data) && data[0] && data[0].generated_text) {
       return data[0].generated_text;
     } else if (data.generated_text) {
       return data.generated_text;
+    } else if (data.error) {
+      return `API Error: ${data.error}`;
     } else {
       return "Error: Unexpected response format from model.";
     }
@@ -133,11 +138,9 @@ async function generateSprite() {
 
 // 6. Initialize everything when DOM is ready
 document.addEventListener("DOMContentLoaded", () => {
-  // Get references to DOM elements
   const input = document.getElementById("userInput");
   const sendBtn = document.getElementById("sendBtn");
 
-  // Attach event listeners
   sendBtn.addEventListener("click", generateSprite);
   input.addEventListener("keydown", (event) => {
     if (event.key === 'Enter') {
@@ -145,6 +148,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Show initial template
   renderGrid(parseMakeCodeImage(TEMPLATE));
 });
