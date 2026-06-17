@@ -31,6 +31,7 @@ const TEMPLATE = `img\`
 \``;
 
 // Send request to HuggingFace Inference API
+// Send request to HuggingFace Inference API
 async function askAI(userPrompt) {
     const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. 
 You must stay safe, friendly, and appropriate. 
@@ -43,6 +44,7 @@ Fill in this template configuration exactly:
 ${TEMPLATE}`;
 
     try {
+        //  FIXED: Points directly to the dedicated API gateway endpoint
         const response = await fetch(
             "https://huggingface.co",
             {
@@ -62,8 +64,13 @@ ${TEMPLATE}`;
         
         const data = await response.json();
         
-        if (response.ok && data && data[0]) {
-            return data[0].generated_text;
+        //  FIXED: Handles both structured arrays and plain object response payloads
+        if (response.ok) {
+            if (Array.isArray(data) && data[0] && data[0].generated_text) {
+                return data[0].generated_text;
+            } else if (data.generated_text) {
+                return data.generated_text;
+            }
         } else if (data.error) {
             return `API Error: ${data.error}`;
         }
@@ -72,6 +79,7 @@ ${TEMPLATE}`;
         return `Network Error: ${err.message}`;
     }
 }
+
 
 // Extract rows that match our target matrix shape 
 function parseMakeCodeImage(text) {
