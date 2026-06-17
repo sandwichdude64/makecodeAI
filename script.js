@@ -60,39 +60,36 @@ async function askAI(userPrompt) {
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block. The user wants this sprite to look like: ${userPrompt} Fill in this template configuration exactly: ${TEMPLATE}`;
 
   try {
-    // FIXED: Use the actual serverless inference API endpoint
+    // FIX: Using the Chat Completions endpoint which allows native browser requests (CORS-safe)
     const response = await fetch(
-  "https://corsproxy.io?" + encodeURIComponent("https://huggingface.co"),
-  {
+      "https://huggingface.co",
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${userKey}`
         },
         body: JSON.stringify({
-          inputs: fullPrompt,
-          parameters: {
-            return_full_text: false, // Don't echo the prompt back
-            max_new_tokens: 512      // Keep response short and fast
-          }
+          model: "Qwen/Qwen2.5-Coder-0.5B-Instruct", // Model moves inside the JSON body
+          messages: [
+            { "role": "user", "content": fullPrompt } // Prompt wrapped in standard chat format
+          ],
+          max_tokens: 512 // Set output limit
         })
       }
     );
 
-    // FIXED: Always read body, even on HTTP errors, so we can inspect them
     const data = await response.json();
 
     if (response.ok) {
-      // Serverless API returns: [ { generated_text: "..." } ]
-      if (Array.isArray(data) && data[0] && data[0].generated_text) {
-        return data[0].generated_text;
-      } else if (data.generated_text) {
-        return data.generated_text;
+      // FIX: Chat endpoints return data in choices[0].message.content
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        return data.choices[0].message.content;
       } else {
         return "Error: Unexpected response format from model.\n\nRaw: " + JSON.stringify(data);
       }
     } else {
-      return `API Error (${response.status}): ${data.error || JSON.stringify(data)}`;
+      return `API Error (${response.status}): ${data.error?.message || JSON.stringify(data)}`;
     }
   } catch (err) {
     return `Network Error: ${err.message}`;
