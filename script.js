@@ -30,147 +30,137 @@ const TEMPLATE = `img\`
 
 // Send request to HuggingFace Inference API Gateway
 async function askAI(userPrompt) {
-    const userKey = tokenInput.value.trim();
-    
-    if (!userKey) {
-        return "Error: Please paste your Hugging Face Token (hf_...) into the top box first.";
+  const userKey = tokenInput.value.trim();
+  if (!userKey) {
+    return "Error: Please paste your Hugging Face Token (hf_...) into the top box first.";
+  }
+
+  const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block. The user wants this sprite to look like: ${userPrompt} Fill in this template configuration exactly: ${TEMPLATE}`;
+
+  try {
+    // FIXED: Real API endpoint sub-domain to handle cross-origin network queries
+    const response = await fetch(
+      "https://huggingface.co", 
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${userKey}`
+        },
+        body: JSON.stringify({
+          inputs: fullPrompt,
+          parameters: {
+            return_full_text: false // Essential: drops instructions from raw response text
+          }
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    // FIXED: Safely unpacks standard text-generation dictionary payloads
+    if (response.ok) {
+      if (Array.isArray(data) && data[0] && data[0].generated_text) {
+        return data[0].generated_text;
+      } else if (data.generated_text) {
+        return data.generated_text;
+      }
+    } else if (data.error) {
+      return `API Error: ${data.error}`;
     }
-
-    const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. 
-You must stay safe, friendly, and appropriate. 
-You must NEVER change the overall grid size. 
-You must ONLY fill the space by replacing dots with valid MakeCode color values (0–9, a–f). 
-You must NEVER add extra commentary text, notes, markdown blocks, or structural explanations outside the code block.
-The user wants this sprite to look like: ${userPrompt}
-
-Fill in this template configuration exactly:
-${TEMPLATE}`;
-
-    try {
-        // FIXED: Points to api-inference endpoint to bypass website CORS locks
-        const response = await fetch(
-            "https://huggingface.co",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${userKey}`
-                },
-                body: JSON.stringify({ 
-                    inputs: fullPrompt,
-                    parameters: {
-                        return_full_text: false // Essential: drops instructions from raw response text
-                    }
-                })
-            }
-        );
-        
-        const data = await response.json();
-        
-        // FIXED: Safely unpacks standard text-generation dictionary payloads
-        if (response.ok) {
-            if (Array.isArray(data) && data[0] && data[0].generated_text) {
-                return data[0].generated_text;
-            } else if (data.generated_text) {
-                return data.generated_text;
-            }
-        } else if (data.error) {
-            return `API Error: ${data.error}`;
-        }
-        return "Error: Unexpected structural response format from inference endpoint.";
-    } catch (err) {
-        return `Network Error: ${err.message}`;
-    }
+    return "Error: Unexpected structural response format from inference endpoint.";
+  } catch (err) {
+    return `Network Error: ${err.message}`;
+  }
 }
 
-// Extract rows that match our target matrix shape 
+// Extract rows that match our target matrix shape
 function parseMakeCodeImage(text) {
-    if (!text) return Array(19).fill(null).map(() => Array(19).fill(null));
-    const lines = text.split("\n");
-    
-    // Filters for string values that are exactly 19 characters wide containing hex digits or dots
-    const gridLines = lines.filter(line => {
-        const clean = line.trim();
-        return clean.length === 19 && /^[.0-9a-fA-F]+$/.test(clean);
-    });
+  if (!text) return Array(19).fill(null).map(() => Array(19).fill(null));
+  const lines = text.split("\n");
+  
+  // Filters for string values that are exactly 19 characters wide containing hex digits or dots
+  const gridLines = lines.filter(line => {
+    const clean = line.trim();
+    return clean.length === 19 && /^[.0-9a-fA-F]+$/.test(clean);
+  });
 
-    // If parsing fails or yields bad shapes, fall back to blank array map
-    if (gridLines.length === 0) {
-        return Array(19).fill(null).map(() => Array(19).fill(null));
-    }
+  // If parsing fails or yields bad shapes, fall back to blank array map
+  if (gridLines.length === 0) {
+    return Array(19).fill(null).map(() => Array(19).fill(null));
+  }
 
-    return gridLines.map(line => 
-        line.trim().split("").map(c => (c === "." ? null : c))
-    );
+  return gridLines.map(line => 
+    line.trim().split("").map(c => (c === "." ? null : c))
+  );
 }
 
 // Convert MakeCode color strings into hex values
 function makeCodeColor(char) {
-    const palette = {
-        ".": "transparent",
-        "1": "#FFFFFF", // white
-        "2": "#FF2121", // red
-        "3": "#FF93C4", // pink
-        "4": "#FF8135", // orange
-        "5": "#FFF609", // yellow
-        "6": "#249CA3", // teal
-        "7": "#78DC52", // green
-        "8": "#003FAD", // dark blue
-        "9": "#87F2FF", // light blue
-        "a": "#8E2EC4", // purple
-        "b": "#A4839F", // grayish purple
-        "c": "#5C406C", // dark purple
-        "d": "#E5CDC4", // beige / skin
-        "e": "#91463D", // brown
-        "f": "#000000"  // black
-    };
-    return palette[char.toLowerCase()] || "transparent";
+  const palette = {
+    ".": "transparent",
+    "1": "#FFFFFF", // white
+    "2": "#FF2121", // red
+    "3": "#FF93C4", // pink
+    "4": "#FF8135", // orange
+    "5": "#FFF609", // yellow
+    "6": "#249CA3", // teal
+    "7": "#78DC52", // green
+    "8": "#003FAD", // dark blue
+    "9": "#87F2FF", // light blue
+    "a": "#8E2EC4", // purple
+    "b": "#A4839F", // grayish purple
+    "c": "#5C406C", // dark purple
+    "d": "#E5CDC4", // beige / skin
+    "e": "#91463D", // brown
+    "f": "#000000" // black
+  };
+  return palette[char.toLowerCase()] || "transparent";
 }
 
 // Render our matrix payload into visual DOM nodes
 function renderGrid(pixelData) {
-    grid.innerHTML = "";
-    
-    pixelData.forEach(row => {
-        row.forEach(cell => {
-            const div = document.createElement("div");
-            div.className = "pixel";
-            if (cell !== null) {
-                div.style.backgroundColor = makeCodeColor(cell);
-            }
-            grid.appendChild(div);
-        });
+  grid.innerHTML = "";
+  pixelData.forEach(row => {
+    row.forEach(cell => {
+      const div = document.createElement("div");
+      div.className = "pixel";
+      if (cell !== null) {
+        div.style.backgroundColor = makeCodeColor(cell);
+      }
+      grid.appendChild(div);
     });
+  });
 }
 
 // Main execution process bound to event interactions
 async function generateSprite() {
-    const prompt = input.value.trim();
-    if (!prompt) return;
-    
-    // Toggle processing state UI elements
-    outputBox.textContent = "Processing sprite request via Qwen 0.5B AI...";
-    input.disabled = true;
-    sendBtn.disabled = true;
-    
-    const aiText = await askAI(prompt);
-    outputBox.textContent = aiText;
-    
-    const pixelData = parseMakeCodeImage(aiText);
-    renderGrid(pixelData);
-    
-    // Reset control bindings
-    input.disabled = false;
-    sendBtn.disabled = false;
-    input.focus();
+  const prompt = input.value.trim();
+  if (!prompt) return;
+
+  // Toggle processing state UI elements
+  outputBox.textContent = "Processing sprite request via Qwen 0.5B AI...";
+  input.disabled = true;
+  sendBtn.disabled = true;
+
+  const aiText = await askAI(prompt);
+  outputBox.textContent = aiText;
+
+  const pixelData = parseMakeCodeImage(aiText);
+  renderGrid(pixelData);
+
+  // Reset control bindings
+  input.disabled = false;
+  sendBtn.disabled = false;
+  input.focus();
 }
 
 // Bind events to the UI
 sendBtn.addEventListener("click", generateSprite);
 input.addEventListener("keydown", (event) => {
-    if (event.key === 'Enter') {
-        generateSprite();
-    }
+  if (event.key === 'Enter') {
+    generateSprite();
+  }
 });
 
 // Initialize template view container placeholder when loading page
