@@ -51,6 +51,20 @@
         #hfTokenInput::placeholder {
             color: #888;
         }
+        #templateSelector {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            background: #2a2a2a;
+            color: #ff9d00;
+            border: 2px solid #ff9d00;
+            box-sizing: border-box;
+            font-family: Consolas, monospace;
+        }
+        #templateSelector option {
+            background: #2a2a2a;
+            color: #ff9d00;
+        }
         #output {
             background: #111;
             padding: 10px;
@@ -96,10 +110,26 @@
         
         <!-- Right Panel -->
         <div id="rightPanel">
-            <!-- Keeps your token hidden from public git crawlers -->
+            <!-- Token Input -->
             <input id="hfTokenInput" type="password" placeholder="Paste your Hugging Face Access Token here (hf_...)">
             
+            <!-- Template Selector -->
+            <label for="templateSelector" style="color: #888; font-size: 12px;">Choose a starter template:</label>
+            <select id="templateSelector">
+                <option value="smiley">😊 Smiley Face</option>
+                <option value="robot">🤖 Robot</option>
+                <option value="heart">❤️ Heart</option>
+                <option value="star">⭐ Star</option>
+                <option value="house">🏠 House</option>
+                <option value="cat">🐱 Cat Face</option>
+                <option value="invader">👾 Space Invader</option>
+                <option value="blank">⬜ Blank</option>
+            </select>
+            
+            <!-- Output Box -->
             <div id="output">AI output will appear here…</div>
+            
+            <!-- User Input & Button -->
             <input id="userInput" placeholder="Describe your sprite (e.g., 'make it a robot')">
             <button id="sendBtn">Generate Sprite</button>
         </div>
