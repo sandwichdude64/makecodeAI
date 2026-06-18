@@ -228,7 +228,7 @@ async function askAI(userPrompt) {
 
   const fullPrompt = `You are an AI assistant that ONLY edits and returns MakeCode img\`\` templates. You must stay safe, friendly, and appropriate. You must NEVER change the overall grid size. You must return ONLY the img\`\` block with no other text. Grid size: 19x19 chars. Available colors: . (blank), 1-9, a-f. User request: ${userPrompt}`;
 
-  const apiUrl = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
+  const apiUrl = "https://huggingface.co/models/Qwen/Qwen2.5-Coder-0.5B-Instruct";
 
   try {
     const response = await fetch(apiUrl, {
